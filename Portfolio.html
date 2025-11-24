@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niranjan Y - Interactive Portfolio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js CDN for 3D Graphics -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Georgia', 'Times New Roman', 'serif'], // For the main name
+                    },
+                    colors: {
+                        'brand-primary': '#9333EA', // Changed from blue to purple
+                        'brand-accent': '#EC4899', // Changed from mint to pink
+                        'brand-bg': '#10111A', // A very dark blue/black
+                        'brand-text': '#E5E7EB', // Light text
+                        'brand-text-secondary': '#9CA3AF', // Grayer text
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                        'typing-blink': 'blink 0.7s infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                         blink: {
+                            '0%, 100%': { 'border-color': 'transparent' },
+                            '50%': { 'border-color': '#9333EA' }, // brand-primary
+                        }
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        /* --- ✨ Global Styles --- */
+        body {
+            background-color: #10111A; /* brand-bg */
+            color: #E5E7EB; /* brand-text */
+            overflow: hidden; /* No scrolling */
+        }
+
+        /* --- ✨ 3D Canvas Background --- */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1; /* Behind content, in front of bg color */
+        }
+        
+        /* --- ✨ Glassmorphism Container --- */
+        .glass-card {
+            background-color: rgba(25, 30, 45, 0.6); /* Translucent dark blue */
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* --- ✨ Main App Layout --- */
+        #app-container {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            padding: 1.5rem;
+            gap: 1.5rem;
+        }
+
+        /* --- ✨ Navigation Bar --- */
+        #main-nav {
+            flex-shrink: 0;
+            padding: 0.5rem 2rem;
+        }
+        .nav-link {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            color: #9CA3AF; /* brand-text-secondary */
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link:hover {
+            color: #FFFFFF;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        .nav-link.active {
+            color: #FFFFFF;
+            font-weight: 600;
+            border-bottom-color: '#9333EA'; /* brand-primary */
+        }
+
+        /* --- ✨ Page Content Area --- */
+        #main-content {
+            flex-grow: 1;
+            overflow-y: auto; /* Allow scrolling *within* the page card */
+            overflow-x: hidden;
+            padding: 2rem;
+            animation: fade-in 0.5s ease-out forwards;
+        }
+
+        /* Hide pages by default */
+        .page-content {
+            display: none;
+        }
+        /* Show active page */
+        .page-content.active {
+            display: block;
+        }
+        
+        /* Scrollbar for content area */
+        #main-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        #main-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #main-content::-webkit-scrollbar-thumb {
+            background: #4B5563;
+            border-radius: 3px;
+        }
+
+        /* --- ✨ 3D Hero Object Container --- */
+        #hero-3d-container {
+            min-height: 300px;
+            cursor: grab;
+        }
+        #hero-3d-container:grabbing {
+            cursor: grabbing;
+        }
+        
+        /* --- ✨ Skills Page Grid --- */
+        .skill-icon-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background-color: rgba(17, 24, 39, 0.7); /* Darker glass */
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            gap: 0.75rem;
+        }
+        .skill-icon-card:hover {
+            transform: scale(1.05);
+            background-color: rgba(30, 41, 59, 0.9);
+            box-shadow: 0 0 20px rgba(147, 51, 234, 0.3); /* Changed to new primary color */
+        }
+        .skill-icon-card svg {
+            width: 3rem;
+            height: 3rem;
+        }
+
+        /* --- ✨ Project Card --- */
+         .project-card {
+            background-color: rgba(17, 24, 39, 0.7); /* Darker glass */
+            transition: all 0.3s ease;
+        }
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+        
+        /* --- ✨ Certifications Table --- */
+        .cert-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .cert-table th, .cert-table td {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .cert-table th {
+            color: #FFFFFF;
+            font-weight: 600;
+        }
+        .cert-table tr:last-child td {
+            border-bottom: none;
+        }
+        .cert-table img {
+            max-height: 2.5rem;
+            width: auto;
+            background: white;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        /* --- ✨ Links Page --- */
+        .link-card {
+            background-color: rgba(17, 24, 39, 0.7); /* Darker glass */
+            padding: 2rem;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        .link-card:hover {
+            transform: scale(1.05);
+            background-color: rgba(30, 41, 59, 0.9);
+        }
+        .link-card svg {
+            width: 4rem;
+            height: 4rem;
+            margin: 0 auto 1rem;
+        }
+
+        /* --- Gemini AI Modal Styles --- */
+        /* Removed all modal, spinner, and toast styles */
+
+        /* Utility Button */
+        .project-link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background-color: #4B5563; /* Gray */
+            color: #FFFFFF;
+            font-weight: 500;
+            font-size: 0.875rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+        }
+        .project-link-btn:hover {
+            background-color: #6B7280; /* Lighter Gray */
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- ✨ 3D Canvas Background -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- ✨ Main App Container -->
+    <div id="app-container">
+        
+        <!-- ✨ Top Navigation Bar -->
+        <nav id="main-nav" class="glass-card">
+            <div class="flex items-center justify-center space-x-2 md:space-x-4">
+                <a href="#home" class="nav-link active" onclick="showPage('home')">Home</a>
+                <a href="#about" class="nav-link" onclick="showPage('about')">About Me</a>
+                <a href="#skills" class="nav-link" onclick="showPage('skills')">Skills</a>
+                <a href="#projects" class="nav-link" onclick="showPage('projects')">Projects</a>
+                <a href="#certifications" class="nav-link" onclick="showPage('certifications')">Certifications</a>
+                <a href="#links" class="nav-link" onclick="showPage('links')">Links</a>
+            </div>
+        </nav>
+
+        <!-- ✨ Main Content Area (Pages) -->
+        <main id="main-content" class="glass-card">
+
+            <!-- === HOME PAGE === -->
+            <section id="page-home" class="page-content active">
+                <div class="grid grid-cols-1 md:grid-cols-2 items-center gap-8 min-h-full">
+                    <!-- Left: Text -->
+                    <div class="text-center md:text-left">
+                        <h1 class="font-serif text-6xl md:text-8xl font-bold text-white">Niranjan Y</h1>
+                        <p class="text-xl md:text-2xl text-brand-text-secondary mt-4 mb-6">
+                            A design-driven technologist building intuitive systems from complex data sets.
+                        </p>
+                        <p class="text-brand-text-secondary">
+                            niranjanyalamanda@gmail.com | +91 9182668636
+                        </p>
+                    </div>
+                    <!-- Right: Interactive 3D Object -->
+                    <div id="hero-3d-container" title="Drag to rotate">
+                        <!-- 3D Hero Object Renders Here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- === ABOUT ME PAGE === -->
+            <section id="page-about" class="page-content">
+                <h2 class="text-3xl font-bold text-white mb-8">About Me</h2>
+                <div class="space-y-8 text-brand-text-secondary max-w-4xl">
+                    <div>
+                        <h3 class="text-2xl font-semibold text-brand-primary mb-3">Professional</h3>
+                        <p class="text-lg mb-4">
+                            Hello! I'm a creative technologist and problem solver passionate about turning complex challenges into high-quality, user-centric solutions.
+                        </p>
+                        <p>
+                            <strong>Core Summary:</strong> My expertise lies in machine learning, data analysis, and predictive modeling. I am proficient in Python, SQL, Excel, Power BI, and various machine learning algorithms. I excel at cleaning, analyzing, and visualizing data to generate insights and drive data-driven decision-making. I am passionate about collaborating on meaningful analytical and machine learning projects in dynamic, fast-paced environments.
+                        </p>
+                    </div>
+                     <div>
+                        <h3 class="text-2xl font-semibold text-brand-primary mb-3">Education</h3>
+                        <p>
+                            <strong>B.Tech in Computer Science (AI & Machine Learning)</strong><br>
+                            VIT Bhopal University (2022 - 2026)<br>
+                            CGPA: 7.68/10
+                        </p>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-semibold text-brand-primary mb-3">Personal</h3>
+                        <p>
+                            Beyond technology, I focus on building my communication, teamwork, and problem-solving abilities. I enjoy explaining complex topics in simple terms and actively participate in group discussions.
+                        </p>
+                        <p class="mt-2">
+                            <strong>Languages:</strong> I am fluent in English, Hindi, and Telugu.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- === SKILLS PAGE === -->
+            <section id="page-skills" class="page-content">
+                <h2 class="text-3xl font-bold text-white mb-8">Languages and Tools</h2>
+                <div class="space-y-10">
+                    <!-- New Full-Width Icon Grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6">
+                        
+                        <!-- Python -->
+                        <div class="skill-icon-card">
+                            <svg class="w-12 h-12" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Python</title><path d="M11.989 1.488c-2.46-.03-4.834.887-6.726 2.65C3.233 5.968 1.943 8.488 1.7 11.238c-.31 3.49 1.05 6.81 3.56 9.1 2.58 2.36 6.01 3.59 9.53 3.4 3.1-.18 5.95-1.57 8.02-3.81 2.08-2.25 3.29-5.18 3.29-8.28 0-3.38-1.5-6.5-3.95-8.58C17.41 2.078 14.38 1.458 11.99 1.488zM6.92 6.438c.2-.21.49-.33.79-.33h1.62c.3 0 .59.12.79.33.2.2.31.48.31.77v1.86c0 .29-.11.57-.31.77-.2.21-.49.33-.79.33H7.71c-.3 0-.59-.12-.79-.33-.2-.2-.31-.48-.31-.77V7.208c0-.29.11-.57.31-.77zm10.16 10.16c.2-.2.31-.48.31-.77v-1.86c0-.29-.11-.57-.31-.77a1.08 1.08 0 0 0-.79-.33h-1.62a1.08 1.08 0 0 0-.79.33c-.2.2-.31.48-.31.77v1.86c0 .29.11.57.31.77.2.21.49.33.79.33h1.62c.3 0 .59-.12.79-.33z" fill="#306998"/><path d="M11.989 1.488c-2.46-.03-4.834.887-6.726 2.65-2.03 1.89-3.32 4.41-3.56 7.16-.31 3.49 1.05 6.81 3.56 9.1 2.58 2.36 6.01 3.59 9.53 3.4 3.1-.18 5.95-1.57 8.02-3.81 2.08-2.25 3.29-5.18 3.29-8.28 0-3.38-1.5-6.5-3.95-8.58C17.41 2.078 14.38 1.458 11.99 1.488zM6.92 6.438c.2-.21.49-.33.79-.33h1.62c.3 0 .59.12.79.33.2.2.31.48.31.77v1.86c0 .29-.11.57-.31.77-.2.21-.49.33-.79.33H7.71c-.3 0-.59-.12-.79-.33-.2-.2-.31-.48-.31-.77V7.208c0-.29.11-.57.31-.77zm10.16 10.16c.2-.2.31-.48.31-.77v-1.86c0-.29-.11-.57-.31-.77a1.08 1.08 0 0 0-.79-.33h-1.62a1.08 1.08 0 0 0-.79.33c-.2.2-.31.48-.31.77v1.86c0 .29.11.57.31.77.2.21.49.33.79.33h1.62c.3 0 .59-.12.79-.33z" fill="none"/><path d="M11.989 4.808c-2.21.02-4.34 1.02-5.86 2.76-1.3 1.49-2 3.32-2 5.2 0 1.94.78 3.8 2.18 5.18 1.42 1.4 3.32 2.18 5.32 2.18 1.78 0 3.48-.56 4.9-1.58 1.52-1.11 2.58-2.67 3.01-4.46.5-2 .22-4.11-.83-5.9-1.04-1.78-2.73-3.1-4.7-3.75-1.76-.59-3.63-.6-5.32-.09zm-1.17 2.08c-.28-.02-.55.07-.78.25-.23.18-.39.43-.45.71l-.6 2.8c0 .05-.02.1-.04.14-.04.04-.1.08-.16.1l-2.73 1.13c-.27.12-.49.33-.6.6-.11.27-.11.58 0 .85.11.27.33.49.6.6l2.74 1.13c.06.02.12.06.16.1.04.05.07.1.08.16l.6 2.8c.06.28.22.53.45.71.23.18.5.27.78.25.28.02.55-.07.78-.25.23-.18.39-.43.45-.71l.6-2.8c0-.05.02-.1.04-.14.04-.04.1-.08.16-.1l2.73-1.13c.27-.12.49-.33.6-.6.11-.27.11.58 0-.85-.11-.27-.33-.49-.6-.6l-2.74-1.13c-.06-.02-.12-.06-.16-.1-.04-.05-.07-.1-.08-.16l-.6-2.8c-.06-.28-.22-.53-.45-.71-.23-.18-.5-.27-.78-.25zm6.5 1.57c-.28.02-.55-.07-.78-.25-.23-.18-.39-.43-.45-.71l-.6-2.8c0-.05-.02-.1-.04-.14-.04-.04-.1-.08-.16-.1l-2.73-1.13c-.27-.12-.49-.33-.6-.6-.11-.27-.11-.58 0-.85.11.27.33.49.6.6l2.74 1.13c.06.02.12.06.16.1.04.05.07.1.08.16l.6 2.8c.06.28.22.53.45.71.23.18.5.27.78.25.28-.02.55.07.78.25.23.18.39.43.45.71l.6 2.8c0 .05.02.1.04.14.04.04.1.08.16.1l2.73 1.13c.27.12.49.33.6.6.11.27.11.58 0 .85-.11-.27-.33-.49-.6-.6l-2.74-1.13c-.06-.02-.12-.06-.16-.1-.04-.05-.07-.1-.08-.16l-.6-2.8c-.06-.28-.22-.53-.45-.71-.23-.18-.5-.27-.78-.25z" fill="#FFD43B"/></svg>
+                            <span class="font-medium text-brand-text">Python</span>
+                        </div>
+                        
+                        <!-- Java -->
+                        <div class="skill-icon-card">
+                            <svg class="w-12 h-12" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Java</title><path d="M17.42.06C13.2-.28 10.05.52 8.44 2.1l-.31.32c-.17.18-.34.36-.5.55-1.8 2.12-2.1 4.88-2.18 7.33-.06 2.07.38 4.2.98 6.25.6 2.04 1.48 3.98 2.5 5.72.17.29.35.58.53.86.03.05.07.1.1.15l.18.25.3.38c1.4 1.7 3.32 2.94 5.5 3.58 2.17.63 4.43.74 6.6.3 2.17-.45 4.18-1.4 5.86-2.8.28-.24.55-.49.8-.75l.1-.1c.14-.14.28-.29.4-.44.2-.25.38-.52.55-.8.9-1.4 1.5-3 1.75-4.7.24-1.68.1-3.42-.3-5.1-.42-1.7-.94-3.3-1.64-4.85-.7-1.5-1.6-2.9-2.6-4.1-.17-.2-.34-.4-.5-.6-.24-.3-.5-.58-.75-.85-.1-.1-.18-.2-.27-.3-.3-.3-.6-.6-.9-.85-.14-.13-.28-.26-.4-.4-.1-.1-.2-.2-.3-.3-.14-.13-.3-.25-.44-.37-.4-.3-.8-.6-1.2-.85-.1-.08-.2-.15-.3-.22-.5-.3-.98-.6-1.5-.85-.13-.05-.26-.1-.38-.15-.4-.2-.8-.3-1.2-.45C18.66.16 18.04.09 17.42.06zM8.8 8.1c-.13 0-.25-.06-.34-.16-.08-.1-.13-.24-.13-.37 0-.14.04-.27.13-.37.1-.1.2-.16.34-.16.13 0 .25.06.34.16.08.1.13.24.13.37 0 .14-.04.27-.13.37-.1.1-.2.16-.34.16zm5.2 4.6c-.14 0-.27-.06-.37-.16-.1-.1-.16-.2-.16-.34 0-.13.06-.25.16-.34.1-.1.2-.16.37-.16.13 0 .25.06.34.16.1.1.16.2.16.34 0 .13-.06.25-.16.34-.1.1-.2.16-.34.16zm1.1-2.2c-.13 0-.25-.06-.34-.16-.08-.1-.13-.24-.13-.37 0-.14.04-.27.13-.37.1-.1.2-.16.34-.16.13 0 .25.06.34.16.08.1.13.24.13.37 0 .14-.04.27-.13.37-.1.1-.2.16-.34.16zm-2.2 0c-.13 0-.25-.06-.34-.16-.08-.1-.13-.24-.13-.37 0-.14.04-.27.13-.37.1-.1.2-.16.34-.16.13 0 .25.06.34.16.08.1.13.24.13.37 0 .14-.04.27-.13.37-.1.1-.2.16-.34.16zm-2.2 2.2c-.13 0-.25-.06-.34-.16-.1-.1-.16-.2-.16-.34 0-.13.06-.25.16-.34.1-.1.2-.16.34-.16.13 0 .25.06.34.16.1.1.16.2.16.34 0 .13-.06.25-.16.34-.1.1-.2.16-.34.16zM8.8 12.7c-.13 0-.25-.06-.34-.16-.1-.1-.16-.2-.16-.34 0-.13.06-.25.16-.34.1-.1.2-.16.34-.16.13 0 .25.06.34.16.1.1.16.2.16.34 0 .13-.06.25-.16.34-.1.1-.2.16-.34.16zm11.2-5.7c-.5-1-1.1-2-1.8-2.8-.7-.8-1.5-1.5-2.3-2.1-1.4-1-3-1.6-4.7-1.7-1.7-.1-3.4.3-4.9 1.1-1.5.8-2.9 2-3.9 3.5-.7 1-1.3 2.1-1.8 3.3-.4 1.1-.7 2.3-.8 3.5-.1 1.2 0 2.4.3 3.5.3 1.2.7 2.3 1.3 3.4.6 1 1.3 2 2.1 2.9.8.8 1.8 1.6 2.8 2.2 1.1.6 2.2.9 3.4 1.1 1.2.2 2.4.1 3.5-.1 1.2-.2 2.3-.6 3.4-1.1.8-.4 1.5-.9 2.2-1.5.6-.6 1.1-1.3 1.6-2 .5-.7 1-1.5 1.3-2.3.4-.8.7-1.7.9-2.5.2-.8.3-1.7.3-2.5.1-1.7-.2-3.4-.8-5z" fill="#f89820"/><path d="m20 7c-.5-1-1.1-2-1.8-2.8-.7-.8-1.5-1.5-2.3-2.1-1.4-1-3-1.6-4.7-1.7-1.7-.1-3.4.3-4.9 1.1-1.5.8-2.9 2-3.9 3.5-.7 1-1.3 2.1-1.8 3.3-.4 1.1-.7 2.3-.8 3.5-.1 1.2 0 2.4.3 3.5.3 1.2.7 2.3 1.3 3.4.6 1 1.3 2 2.1 2.9.8.8 1.8 1.6 2.8 2.2 1.1.6 2.2.9 3.4 1.1 1.2.2 2.4.1 3.5-.1 1.2-.2 2.3-.6 3.4-1.1.8-.4 1.5-.9 2.2-1.5.6-.6 1.1-1.3 1.6-2 .5-.7 1-1.5 1.3-2.3.4-.8.7-1.7.9-2.5.2-.8.3-1.7.3-2.5.1-1.7-.2-3.4-.8-5zm-5.6 11.2c-.7.6-1.5 1-2.4 1.3-.9.3-1.8.4-2.7.3-1-.1-1.9-.3-2.8-.7-.9-.4-1.7-1-2.5-1.7-.7-.7-1.3-1.5-1.8-2.4-.5-.9-.8-1.9-1.1-2.9-.2-1-.3-2-.3-3 0-1 .1-2 .3-3 .2-1 .5-1.9.9-2.8.3-.9.8-1.7 1.3-2.5.5-.8 1.2-1.5 1.9-2.1.7-.6 1.5-1.1 2.4-1.5.9-.4 1.8-.7 2.8-.8.9-.1 1.9 0 2.8.2 1 .2 1.9.5 2.8.9.9.4 1.7 1 2.5 1.6.8.6 1.5 1.3 2 2.1.5.8.9 1.7 1.2 2.6.3.9.5 1.9.6 2.8.1 1 .1 2.1-.1 3.1-.1 1-.4 2-.7 2.9-.4.9-1.2 2.2-2.6 3.6z" fill="#5382a1"/></svg>
+                            <span class="font-medium text-brand-text">Java</span>
+                        </div>
+                        
+                        <!-- GitHub -->
+                        <div class="skill-icon-card">
+                            <svg class="text-white w-12 h-12" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><title>GitHub</title><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+                            <span class="font-medium text-brand-text">GitHub</span>
+                        </div>
+                        
+                        <!-- MySQL -->
+                        <div class="skill-icon-card">
+                            <svg class="w-12 h-12" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>MySQL</title><path d="M12.012 2C5.922 2 1 6.38 1 12.321c0 5.96 4.902 10.34 11.012 10.34s11.012-4.38 11.012-10.34C23.024 6.38 18.102 2 12.012 2zm.02 1.81c4.512 0 8.353 2.92 9.213 7.02H2.82c.86-4.1 4.701-7.02 9.213-7.02zM3.483 12.9a9.5 9.5 0 0 0 .61 2.34l-1.92 2.24a10.95 10.95 0 0 1-.98-4.58h2.29zm2.46 5.56l1.87-2.18a9.4 9.4 0 0 0 3.01 1.51v2.54a10.9 10.9 0 0 1-4.88-1.87zm4.88 1.86v-2.52a9.4 9.4 0 0 0 2.37 0v2.52a10.9 10.9 0 0 1-2.37 0zm3.8-.2v-2.32a9.4 9.4 0 0 0 3.01-1.51l1.87 2.18a10.9 10.9 0 0 1-4.88 1.85zm3.84-4.08l-1.93-2.24a9.5 9.5 0 0 0 .61-2.34h2.29c-.2.92-.5 1.8-.9 2.64a10.95 10.95 0 0 1-.07 1.94zM12.032 20.86c-4.512 0-8.353-2.92-9.213-7.02h18.426c-.86 4.1-4.701 7.02-9.213 7.02zm8.79-11.83H3.2c-.1.3-.18.61-.25.93h18.1c-.07-.32-.15-.63-.25-.93z" fill="#00758F"/><path d="M12.712 13.041c.2-.01.38.01.55.05.17.04.33.1.48.18.15.08.28.18.4.3.12.12.23.25.32.4.1.15.17.3.23.47.06.17.1.34.1.53 0 .1-.01.2-.04.3-.03.1-.07.2-.12.28-.05.08-.11.16-.18.22-.07.06-.15.12-.24.16a.9.9 0 0 1-.28.11c-.1.03-.2.04-.3.04-.13 0-.26-.02-.38-.05-.12-.03-.24-.08-.35-.14a1.2 1.2 0 0 1-.3-.2c-.08-.08-.16-.17-.22-.27-.06-.1-.1-.2-.13-.3s-.05-.2-.05-.3a.7.7 0 0 1 .05-.3c.03-.1.08-.2.13-.3.05-.1.12-.18.2-.26a1 1 0 0 1 .46-.37c.09-.05.18-.08.28-.11zm-.02 2.6c.07 0 .14-.01.2-.02.06-.01.12-.03.18-.05.06-.02.1-.05.15-.08.05-.03.09-.06.12-.1.03-.04.06-.08.08-.12.02-.04.03-.09.03-.14 0-.05-.01-.1-.03-.14-.02-.04-.05-.08-.08-.12-.03-.04-.07-.07-.12-.1a.4.4 0 0 0-.15-.08.6.6 0 0 0-.18-.05.8.8 0 0 0-.2-.02c-.07 0-.14.01-.2.02-.06.01-.12.03-.18.05-.06.02-.1.05-.15.08-.05.03-.09.06-.12.1-.03.04-.06.08-.08.12-.02.04-.03.09-.03.14s.01.1.03.14c.02.04.05.08.08.12.03.04.07.07.12.1a.4.4 0 0 0 .15.08c.06.02.12.04.18.05.06.01.13.02.2.02zm.02-.79c.1 0 .2-.02.28-.05.08-.03.16-.08.22-.14.06-.06.1-.13.13-.21s.04-.16.04-.25c0-.09-.01-.17-.04-.25s-.07-.15-.13-.21a.5.5 0 0 0-.22-.14.7.7 0 0 0-.28-.05.7.7 0 0 0-.28.05.5.5 0 0 0-.22.14c-.06.06-.1.13-.13.21s-.04.16-.04.25c0 .09.01.17.04.25s.07.15.13.21c.06.06.14.11.22.14.08.03.18.05.28.05z" fill="#F29111"/></svg>
+                            <span class="font-medium text-brand-text">MySQL</span>
+                        </div>
+                        
+                        <!-- MS Excel -->
+                        <div class="skill-icon-card">
+                            <svg class="w-12 h-12" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Microsoft Excel</title><path d="M23 1.5q.41 0 .7.3.3.29.3.7v19q0 .41-.3.7-.29.3-.7.3H7q-.41 0-.7-.3-.3-.29-.3-.7V18H1q-.41 0-.7-.3-.3-.29-.3-.7V7q0-.41.3-.7.29-.3.7-.3h5V1.5q0-.41.3-.7.29-.3.7-.3zM6 13.28l1.42 2.66h2.14l-2.38-3.87 2.34-3.8H7.4L6 11.23 4.6 8.2H2.48l2.34 3.8-2.38 3.87h2.14zM22 3H8v3h14zM8 8v10h14V8z" fill="#217346"/></svg>
+                            <span class="font-medium text-brand-text">MS Excel</span>
+                        </div>
+                        
+                        <!-- Power BI -->
+                        <div class="skill-icon-card">
+                            <svg class="w-12 h-12" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Power BI</title><path d="M1.429 2.857h4.57v18.286h-4.57zM7.429 8.286h4.571v12.857h-4.57zM13.429 0h4.57v21.143h-4.57zM19.429 4.857h4.57v16.286h-4.57z" fill="#F2C811"/></svg>
+                            <span class="font-medium text-brand-text">Power BI</span>
+                        </div>
+                        
+                        <!-- HTML5 -->
+                         <div class="skill-icon-card">
+                            <svg class="w-12 h-12" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>HTML5</title><path d="M1.603 0l1.713 19.223L12 22.259l8.684-3.037L22.394 0H1.603zM18.42 5.882H7.29l.322 3.63H18.1l-.322 3.62H7.934l.322 3.62h9.522l-.727 8.165-3.88.992-3.88-.992-.24-2.705H5.16l.484 5.42L12 19.91l6.356-2.215.887-9.93H18.42z" fill="#E34F26"/></svg>
+                            <span class="font-medium text-brand-text">HTML5</span>
+                        </div>
+                        
+                        <!-- CSS3 -->
+                        <div class="skill-icon-card">
+                            <svg class="w-12 h-12" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>CSS3</title><path d="M1.603 0l1.713 19.223L12 22.259l8.684-3.037L22.394 0H1.603zM17.86 5.882l.24-2.705H5.16l.484 5.42L12 19.91l6.356-2.215.887-9.93H17.86zM16.14 9.512H7.934l.322 3.62h9.522l-.322 3.62H7.29l-.483-5.42h9.522l.322-3.62H7.29l-.322-3.63H18.1l-.24 2.705H16.14z" fill="#1572B6"/></svg>
+                            <span class="font-medium text-brand-text">CSS3</span>
+                        </div>
+                        
+                        <!-- AWS -->
+                        <div class="skill-icon-card">
+                           <svg class="w-12 h-12" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Amazon AWS</title><path d="M13.434 16.035c-.468.216-.96.408-1.428.576-.468.168-.936.252-1.38.252-.78 0-1.488-.204-2.124-.612-.636-.408-1.128-1.008-1.476-1.8-.348-.792-.522-1.74-.522-2.844 0-1.104.168-2.052.504-2.844.336-.792.828-1.404 1.476-1.836.648-.432 1.368-.648 2.16-.648.444 0 .888.084 1.332.252.444.168.888.36 1.332.576l.72-1.608c-.6-.288-1.248-.528-1.944-.72-.696-.192-1.416-.288-2.16-.288-1.296 0-2.46.336-3.492 1.008-.912.6-1.632 1.44-2.16 2.52-.528 1.08-.792 2.316-.792 3.708 0 1.392.264 2.628.792 3.708.528 1.08 1.248 1.92 2.16 2.52 1.032.672 2.196 1.008 3.492 1.008.744 0 1.464-.096 2.16-.288.696-.192 1.344-.432 1.944-.72l-.72-1.608zM20.658 16.035c-.468.216-.96.408-1.428.576-.468.168-.936.252-1.38.252-.78 0-1.488-.204-2.124-.612-.636-.408-1.128-1.008-1.476-1.8-.348-.792-.522-1.74-.522-2.844 0-1.104.168-2.052.504-2.844.336-.792.828-1.404 1.476-1.836.648-.432 1.368-.648 2.16-.648.444 0 .888.084 1.332.252.444.168.888.36 1.332.576l.72-1.608c-.6-.288-1.248-.528-1.944-.72-.696-.192-1.416-.288-2.16-.288-1.296 0-2.46.336-3.492 1.008-.912.6-1.632 1.44-2.16 2.52-.528 1.08-.792 2.316-.792 3.708 0 1.392.264 2.628.792 3.708.528 1.08 1.248 1.92 2.16 2.52 1.032.672 2.196 1.008 3.492 1.008.744 0 1.464-.096 2.16-.288.696-.192 1.344-.432 1.944-.72l-.72-1.608zM21.716 21.03c-1.3 1.4-3.1 2.1-5.4 2.1-1.3 0-2.6-.2-3.8-.7l.8-1.7c.9.4 1.8.6 2.9.6 1.3 0 2.4-.3 3.3-.9s1.4-1.4 1.7-2.4c.1-.3.2-.6.2-.9l-6.8-1.6c-1.2-.3-2.2-.8-2.9-1.6-.7-.8-1.1-1.8-1.1-3.1 0-1.1.3-2.1 1-2.9.7-.8 1.6-1.4 2.8-1.7 1.1-.3 2.3-.5 3.6-.5 1 0 2 .1 2.9.4 1 .2 1.8.5 2.6.9l-1 1.7c-.6-.3-1.3-.6-2-.8-.7-.2-1.4-.3-2.1-.3-1.1 0-2 .2-2.7.5-.7.3-1.3.8-1.7 1.4-.4.6-.6 1.3-.6 2.1s.2 1.5.6 2.1c.4.6 1 1 1.7 1.3.7.3 1.7.5 2.8.7l7.2 1.7c.1 1.2-.2 2.3-.9 3.3z" fill="#FF9900"/></svg>
+                            <span class="font-medium text-brand-text">AWS</span>
+                        </div>
+                        
+                        <!-- Adding Git from resume -->
+                        <div class="skill-icon-card">
+                            <svg class="w-12 h-12" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Git</title><path d="M23.5 10.6c.3 1.4-.5 2.8-1.9 3.2l-1.6.5c-.3.1-.6.1-.8.1-.5 0-1-.2-1.4-.5l-3.3-3.3c-.4-.4-.6-.9-.6-1.5V7.6c0-1.1 1.1-1.7 2-1.2l1.6.8c1.3.7 2.1 2 2.1 3.4zm-11.2 6.9l-3.3 3.3c-.4.4-.9.6-1.5.6s-1.1-.2-1.5-.6L2.3 17c-.7-1.3-.3-3 1-3.7l1.6-.8c1.1-.5 2.4.1 2.9 1.2l2.3 4.6c.2.6.2 1.2 0 1.8zm-5.7-9.2L2.3 7C1 6.3.6 4.9 1.3 3.6l.8-1.6C2.6.8 4.2.3 5.5 1l3.3 3.3c.4.4.6.9.6 1.5s-.2 1.1-.6 1.5L6.6 9.6c-.6.2-1.2.2-1.8 0zM12 10.6c0-1.4.8-2.7 2.1-3.4l1.6-.8c.9-.5 2 .1 2 1.2v1.5c0 .6-.2 1.1-.6 1.5l-3.3 3.3c-.4.4-1 .6-1.5.6s-1.1-.2-1.5-.6L7.5 10c-.7-1.3-.3-3 1-3.7l1.6-.8c1.1-.5 2.4.1 2.9 1.2l2.3 4.6c.2.6.2 1.2 0 1.8l-3.3 3.3c-.4.4-.9.6-1.5.6s-1.1-.2-1.5-.6L5.5 13c-.7-1.3-.3-3 1-3.7l1.6-.8c1.1-.5 2.4.1 2.9 1.2L12 10.6z" fill="#F05032"/></svg>
+                            <span class="font-medium text-brand-text">Git</span>
+                        </div>
+                    </div>
+
+                    <!-- New Text Description Row -->
+                    <div class="pt-10 mt-10 border-t border-white/10">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-brand-text-secondary">
+                            <div>
+                                <h3 class="text-xl font-semibold text-white mb-2">Data Science & Machine Learning</h3>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li>Full data science lifecycle: data cleaning (Pandas), analysis (NumPy), and predictive modeling (Scikit-learn).</li>
+                                    <li>Building and integrating computer vision (YOLOv8, OpenCV) and text recognition (Tesseract) models.</li>
+                                    <li>Creating dynamic, insightful dashboards and reports with Power BI and MS Excel.</li>
+                                </ul>
+                            </div>
+                             <div>
+                                <h3 class="text-xl font-semibold text-white mb-2">Backend & Database Development</h3>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li>Developing secure, full-stack applications with complete CRUD functionality and real-time alerts.</li>
+                                    <li>Proficient in relational databases, including MySQL and PostgreSQL, for data storage and management.</li>
+                                    <li>Using Python and Java to build robust backend logic for web applications.</li>
+                                </ul>
+                            </div>
+                             <div>
+                                <h3 class="text-xl font-semibold text-white mb-2">Platforms & Core Skills</h3>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li>Version control with Git and GitHub for collaborative development.</li>
+                                    <li>Familiar with cloud platform basics (AWS) for application deployment.</li>
+                                    <li>Strong problem-solving, communication, and teamwork skills in fast-paced environments.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- === END SKILLS PAGE === -->
+
+            <!-- === PROJECTS PAGE === -->
+            <section id="page-projects" class="page-content">
+                <h2 class="text-3xl font-bold text-white mb-8">Projects</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                    <!-- Project 1 -->
+                    <div class="project-card rounded-lg shadow-lg overflow-hidden flex flex-col">
+                        <img src="https://placehold.co/600x400/10111A/33FFB8?text=AI+Assistive+Platform" alt="AI-Powered Assistive Web Platform" class="w-full h-40 object-cover">
+                        <div class="p-5 flex-grow flex flex-col">
+                            <h3 class="text-xl font-semibold text-white mb-2">AI-Powered Assistive Web Platform</h3>
+                            <p class="text-sm text-brand-text-secondary mb-3">Aug 2024 - May 2025</p>
+                            <div class="flex flex-wrap gap-2 mb-3">
+                                <span class="text-xs bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full">YOLOv8</span>
+                                <span class="text-xs bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full">PyTorch</span>
+                                <span class="text-xs bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full">OpenCV</span>
+                            </div>
+                            <p class="text-brand-text-secondary text-sm flex-grow">
+                                Developed a web app integrating AI models for object detection, text recognition, and distance calculation to enhance accessibility for visually impaired users.
+                            </p>
+                            <div class="mt-4 flex flex-wrap gap-3">
+                                <a href="https://github.com/niranjan-y" target="_blank" rel="noopener noreferrer" class="project-link-btn text-xs px-3 py-1.5">
+                                    <span>GitHub</span>
+                                </a>
+                                <!-- Removed AI Explanation Button -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project 2 -->
+                    <div class="project-card rounded-lg shadow-lg overflow-hidden flex flex-col">
+                        <img src="https://placehold.co/600x400/10111A/0D6EFD?text=Intrusion+Detection" alt="Intrusion Detection System" class="w-full h-40 object-cover">
+                        <div class="p-5 flex-grow flex flex-col">
+                            <h3 class="text-xl font-semibold text-white mb-2">Intrusion Detection System (Capstone)</h3>
+                            <p class="text-sm text-brand-text-secondary mb-3">Jan 2025 - Feb 2025</p>
+                            <div class="flex flex-wrap gap-2 mb-3">
+                                <span class="text-xs bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full">Scikit-learn</span>
+                                <span class="text-xs bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full">PostgreSQL</span>
+                                <span class="text-xs bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full">Power BI</span>
+                            </div>
+                            <p class="text-brand-text-secondary text-sm flex-grow">
+                                Developed an ML-based IDS to monitor network traffic, detect malicious activity, and visualize attack patterns using Power BI for proactive security.
+                            </p>
+                            <div class="mt-4 flex flex-wrap gap-3">
+                                <a href="https://github.com/niranjan-y" target="_blank" rel="noopener noreferrer" class="project-link-btn text-xs px-3 py-1.5">
+                                    <span>GitHub</span>
+                                </a>
+                                <!-- Removed AI Explanation Button -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project 3 -->
+                    <div class="project-card rounded-lg shadow-lg overflow-hidden flex flex-col">
+                        <img src="https://placehold.co/600x400/10111A/E83B3B?text=Blood+Bank+System" alt="Blood Bank Management" class="w-full h-40 object-cover">
+                        <div class="p-5 flex-grow flex flex-col">
+                            <h3 class="text-xl font-semibold text-white mb-2">Blood Bank Management System</h3>
+                            <p class="text-sm text-brand-text-secondary mb-3">Jan 2025 - Feb 2025</p>
+                            <div class="flex flex-wrap gap-2 mb-3">
+                                <span class="text-xs bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full">Python</span>
+                                <span class="text-xs bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full">PostgreSQL</span>
+                                <span class="text-xs bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full">Power BI</span>
+                            </div>
+                            <p class="text-brand-text-secondary text-sm flex-grow">
+                                Developed a secure management system for donors, recipients, and inventory with real-time alerts and automated analytics reports in Power BI.
+                            </p>
+                            <div class="mt-4 flex flex-wrap gap-3">
+                                <a href="https://github.com/niranjan-y" target="_blank" rel="noopener noreferrer" class="project-link-btn text-xs px-3 py-1.5">
+                                    <span>GitHub</span>
+                                </a>
+                                <!-- Removed AI Explanation Button -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+            
+            <!-- === CERTIFICATIONS PAGE === -->
+            <section id="page-certifications" class="page-content">
+                <h2 class="text-3xl font-bold text-white mb-8">Certifications</h2>
+                <div class="overflow-x-auto">
+                    <table class="cert-table">
+                        <thead>
+                            <tr>
+                                <th>Issuing Body</th>
+                                <th>Name</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><img src="https://placehold.co/150x50/FFFFFF/000000?text=ORACLE" alt="Oracle"></td>
+                                <td class="text-white">Oracle Data Science Professional Certificate</td>
+                                <td>2025</td>
+                            </tr>
+                            <tr>
+                                <td><img src="https://placehold.co/150x50/FFFFFF/000000?text=Microsoft" alt="Microsoft"></td>
+                                <td class="text-white">Career Essentials in Generative AI</td>
+                                <td>July 2024</td>
+                            </tr>
+                            <tr>
+                                <td><img src="https://placehold.co/150x50/FFFFFF/000000?text=U-M" alt="University of Michigan"></td>
+                                <td class="text-white">Applied Machine Learning in Python</td>
+                                <td>2024</td>
+                            </tr>
+                             <tr>
+                                <td><img src="https://placehold.co/150x50/FFFFFF/000000?text=HackerRank" alt="HackerRank"></td>
+                                <td class="text-white">SQL Basic</td>
+                                <td>2024</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- === LINKS/CONTACT PAGE === -->
+            <section id="page-links" class="page-content">
+                <h2 class="text-3xl font-bold text-white mb-4 text-center">Connect With Me</h2>
+                 <div class="text-center mb-8">
+                    <a href="mailto:niranjanyalamanda@gmail.com" class="text-brand-text-secondary hover:text-brand-primary transition duration-300 mx-4">niranjanyalamanda@gmail.com</a>
+                    <span class="text-brand-text-secondary">|</span>
+                    <a href="tel:+919182668636" class="text-brand-text-secondary hover:text-brand-primary transition duration-300 mx-4">+91 9182668636</a>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                    <!-- LinkedIn -->
+                    <a href="https://linkedin.com/in/niranjan-y-54b90b256" target="_blank" rel="noopener noreferrer" class="link-card">
+                        <svg class="text-blue-500" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg>
+                        <h3 class="text-xl font-semibold text-white">LinkedIn</h3>
+                    </a>
+                    <!-- GitHub -->
+                    <a href="https://github.com/niranjan-y" target="_blank" rel="noopener noreferrer" class="link-card">
+                        <svg class="text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.026 2.747-1.026.546 1.379.202 2.398.1 2.65.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" /></svg>
+                        <h3 class="text-xl font-semibold text-white">GitHub</h3>
+                    </a>
+                    <!-- Resume -->
+                    <a href="My_Resume.pdf" target="_blank" class="link-card">
+                         <svg class="text-brand-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <h3 class="text-xl font-semibold text-white">Resume</h3>
+                    </a>
+                </div>
+
+                <!-- AI Contact Drafter Removed -->
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ✨ Gemini AI Modal HTML Removed -->
+
+    <!-- Toast for 'Copied to Clipboard' Removed -->
+
+
+    <!-- JavaScript -->
+    <script>
+        // --- Gemini API Configuration Removed ---
+
+        /**
+         * API Fetch Functions Removed
+         */
+
+        // --- Modal Control Functions Removed ---
+        
+        // --- ✨ Page Navigation Logic ---
+        const navLinks = document.querySelectorAll('.nav-link');
+        const pages = document.querySelectorAll('.page-content');
+        const mainContent = document.getElementById('main-content');
+
+        function showPage(pageId) {
+            // Hide all pages
+            pages.forEach(page => {
+                page.classList.remove('active');
+            });
+            // Show the target page
+            const targetPage = document.getElementById(`page-${pageId}`);
+            if (targetPage) {
+                targetPage.classList.add('active');
+            }
+
+            // Update active nav link
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${pageId}`) {
+                    link.classList.add('active');
+                }
+            });
+
+            // Scroll content area to top
+            mainContent.scrollTop = 0;
+            
+            // Prevent default anchor behavior
+            event.preventDefault();
+        }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            
+            // --- ✨ AI Project Explainer Logic Removed ---
+
+            // --- ✨ AI Contact Drafter Logic Removed ---
+
+            // --- ✨ Three.js Interactive Background Logic ---
+            let bgScene, bgCamera, bgRenderer, bgPoints;
+            let bgMouse = { x: 0, y: 0 };
+            const bgCanvas = document.getElementById('bg-canvas');
+
+            function initGlobalBG() {
+                bgScene = new THREE.Scene();
+                bgCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                bgCamera.position.z = 5;
+
+                bgRenderer = new THREE.WebGLRenderer({ canvas: bgCanvas, alpha: true });
+                bgRenderer.setSize(window.innerWidth, window.innerHeight);
+                bgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+                const geometry = new THREE.BufferGeometry();
+                const count = 15000;
+                const positions = new Float32Array(count * 3);
+                for(let i = 0; i < count * 3; i++) {
+                    positions[i] = (Math.random() - 0.5) * 15;
+                }
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+                const material = new THREE.PointsMaterial({
+                    size: 0.015,
+                    color: 0x9333EA, // Changed to new primary color
+                    transparent: true,
+                    opacity: 0.7
+                });
+
+                bgPoints = new THREE.Points(geometry, material);
+                bgScene.add(bgPoints);
+
+                window.addEventListener('resize', onGlobalResize);
+                document.addEventListener('mousemove', onGlobalMouseMove);
+                animateGlobalBG();
+            }
+
+            function animateGlobalBG() {
+                requestAnimationFrame(animateGlobalBG);
+                bgPoints.rotation.y += 0.0001;
+                bgPoints.rotation.y += (bgMouse.x * 0.0005 - bgPoints.rotation.y) * 0.02;
+                bgPoints.rotation.x += (-bgMouse.y * 0.0005 - bgPoints.rotation.x) * 0.02;
+                bgRenderer.render(bgScene, bgCamera);
+            }
+
+            function onGlobalResize() {
+                bgCamera.aspect = window.innerWidth / window.innerHeight;
+                bgCamera.updateProjectionMatrix();
+                bgRenderer.setSize(window.innerWidth, window.innerHeight);
+                bgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            }
+
+            function onGlobalMouseMove(event) {
+                bgMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                bgMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            }
+
+            initGlobalBG();
+
+            // --- ✨ Three.js Hero Object Logic ---
+            let heroScene, heroCamera, heroRenderer, heroMesh;
+            let heroMouse = { x: 0, y: 0, isDown: false };
+            const heroContainer = document.getElementById('hero-3d-container');
+
+            function initHero3D() {
+                heroScene = new THREE.Scene();
+                const SIZES = heroContainer.getBoundingClientRect();
+                
+                heroCamera = new THREE.PerspectiveCamera(75, SIZES.width / SIZES.height, 0.1, 100);
+                heroCamera.position.z = 3;
+
+                heroRenderer = new THREE.WebGLRenderer({ alpha: true });
+                heroRenderer.setSize(SIZES.width, SIZES.height);
+                heroRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                heroContainer.appendChild(heroRenderer.domElement);
+                
+                // A data-crystal-like shape
+                const geometry = new THREE.IcosahedronGeometry(1.2, 0); 
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0x9333EA, // Changed to new primary color
+                    metalness: 0.3,
+                    roughness: 0.4,
+                    emissive: 0xEC4899, // Changed to new accent color
+                    emissiveIntensity: 0.2,
+                    wireframe: true
+                });
+                
+                heroMesh = new THREE.Mesh(geometry, material);
+                heroScene.add(heroMesh);
+
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                heroScene.add(ambientLight);
+                const pointLight = new THREE.PointLight(0xffffff, 1);
+                pointLight.position.set(2, 3, 4);
+                heroScene.add(pointLight);
+
+                // Event Listeners
+                heroContainer.addEventListener('mousedown', () => heroMouse.isDown = true);
+                heroContainer.addEventListener('mouseup', () => heroMouse.isDown = false);
+                heroContainer.addEventListener('mouseleave', () => heroMouse.isDown = false);
+                heroContainer.addEventListener('mousemove', (event) => {
+                    if (heroMouse.isDown) {
+                        heroMesh.rotation.y += event.movementX * 0.01;
+                        heroMesh.rotation.x += event.movementY * 0.01;
+                    }
+                });
+                
+                // Resize listener for hero canvas
+                new ResizeObserver(() => {
+                    const newSizes = heroContainer.getBoundingClientRect();
+                    heroCamera.aspect = newSizes.width / newSizes.height;
+                    heroCamera.updateProjectionMatrix();
+                    heroRenderer.setSize(newSizes.width, newSizes.height);
+                    heroRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                }).observe(heroContainer);
+
+                animateHero3D();
+            }
+
+            function animateHero3D() {
+                requestAnimationFrame(animateHero3D);
+                if (!heroMouse.isDown) {
+                    heroMesh.rotation.x += 0.001;
+                    heroMesh.rotation.y += 0.002;
+                }
+                heroRenderer.render(heroScene, heroCamera);
+            }
+
+            initHero3D();
+
+        });
+    </script>
+
+</body>
+</html>
+
+
+
+
