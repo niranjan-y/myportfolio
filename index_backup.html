@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niranjan Y - Interactive Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Base Styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #E0E0E0;
+            overflow: hidden;
+            /* No scrolling */
+            /* Background will be set by JS, with a fallback */
+            background: #02040a;
+            /* Cosmic Blue/Black */
+        }
+
+        /* 3D Background Canvas */
+        #particle-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+        }
+
+        /* Glassmorphism Container */
+        .glass-container {
+            background: rgba(10, 25, 60, 0.25);
+            /* Deep Blue Glass */
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 1.5rem;
+            /* 24px */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            z-index: 100;
+        }
+
+        nav .nav-link {
+            transition: all 0.3s ease;
+            color: #C0C0C0;
+            position: relative;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+        }
+
+        nav .nav-link:hover {
+            color: #FFFFFF;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        nav .nav-link.active {
+            color: #FFFFFF;
+            font-weight: 500;
+        }
+
+        /* Active link indicator */
+        nav .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background: #38BDF8;
+            /* Cyan accent */
+            border-radius: 50%;
+            box-shadow: 0 0 10px #38BDF8;
+        }
+
+        /* Page Wrapper */
+        .page-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-top: 8rem;
+            /* Space for nav */
+            padding-bottom: 2rem;
+            box-sizing: border-box;
+        }
+
+        /* Page Content */
+        .page {
+            width: 90%;
+            max-width: 1000px;
+            height: calc(100vh - 10rem);
+            /* Full height minus padding */
+            overflow-y: auto;
+            padding: 2rem;
+            box-sizing: border-box;
+            /* Hide all pages by default */
+            display: none;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        /* Custom scrollbar for page content */
+        .page::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .page::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .page::-webkit-scrollbar-thumb {
+            background: #3B82F6;
+            /* Blue */
+            border-radius: 10px;
+        }
+
+        .page::-webkit-scrollbar-thumb:hover {
+            background: #60A5FA;
+            /* Lighter Blue */
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Home Page Specifics */
+        #hero-crystal-container {
+            width: 100%;
+            height: 250px;
+            cursor: grab;
+        }
+
+        #hero-crystal-container:active {
+            cursor: grabbing;
+        }
+
+        /* Skills Page Specifics */
+        .skill-icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .skill-icon-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+        }
+
+        .skill-icon {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .skill-icon:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .skill-icon img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+
+        .skill-icon span {
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        /* Projects Page Specifics */
+        .project-card {
+            transition: all 0.3s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+            border-color: #3B82F6;
+        }
+
+        /* Certifications Table */
+        .cert-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .cert-table th,
+        .cert-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .cert-table th {
+            font-weight: 600;
+            color: #FFFFFF;
+        }
+
+        .cert-table img {
+            width: 100px;
+        }
+
+        .cert-link {
+            color: #38BDF8;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .cert-link:hover {
+            color: #FFFFFF;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body class="bg-[#02040a]">
+
+    <!-- 3D Particle Background Canvas -->
+    <canvas id="particle-bg"></canvas>
+
+    <!-- Navigation -->
+    <nav class="glass-container p-2 flex items-center justify-center space-x-1 md:space-x-2">
+        <a href="#" class="nav-link active" data-page="home">Home</a>
+        <a href="#" class="nav-link" data-page="about">AboutMe</a>
+        <a href="#" class="nav-link" data-page="skills">Skills</a>
+        <a href="#" class="nav-link" data-page="projects">Projects</a>
+        <a href="#" class="nav-link" data-page="certs">Certifications</a>
+        <a href="#" class="nav-link" data-page="links">Links</a>
+    </nav>
+
+    <!-- Page Wrapper -->
+    <div class="page-wrapper">
+
+        <!-- Home Page -->
+        <div id="home"
+            class="page glass-container flex flex-col md:flex-row items-center justify-center text-center md:text-left">
+            <div class="md:w-1/2 p-4">
+                <h1 class="text-5xl md:text-7xl font-bold text-white">Niranjan Y</h1>
+                <p class="text-xl md:text-2xl text-cyan-300 mt-4">Data Scientist & Analyst</p>
+                <p class="text-lg text-gray-300 mt-6 max-w-lg mx-auto md:mx-0">
+                    A design-driven technologist building intuitive systems from complex data sets.
+                </p>
+            </div>
+            <div class="md:w-1/2 p-4 flex items-center justify-center">
+                <div id="hero-crystal-container"></div>
+            </div>
+        </div>
+
+        <!-- About Me Page -->
+        <div id="about" class="page glass-container">
+            <h2 class="text-4xl font-bold text-white mb-8 text-center">About Me</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-2xl font-semibold text-cyan-300 mb-4">Professional</h3>
+                    <ul class="list-disc list-inside space-y-3 text-gray-200">
+                        <li>Currently pursuing a B.Tech in Computer Science with a specialisation in AI & Machine
+                            Learning at VIT Bhopal University (CGPA: 7.68).</li>
+                        <li>Passionate technologist and problem-solver focused on turning complex challenges into
+                            high-quality, user-centric solutions.</li>
+                        <li>Core technical foundation in Python, SQL, and Java, with expertise in data science libraries
+                            (NumPy, Pandas, Scikit-learn) and visualization tools (Power BI, MS Excel).</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-semibold text-cyan-300 mb-4">Personal</h3>
+                    <ul class="list-disc list-inside space-y-3 text-gray-200">
+                        <li>Beyond technology, I focus on building my communication, teamwork, and problem-solving
+                            abilities.</li>
+                        <li>Communication Style: I enjoy explaining complex topics in simple terms and actively
+                            participate in group discussions.</li>
+                        <li>Languages: I am fluent in English, Hindi, and Telugu.</li>
+                        <li>Outlook: I believe my adaptability and attention to detail help me bring a well-rounded and
+                            effective perspective to every challenge.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skills Page -->
+        <div id="skills" class="page glass-container">
+            <h2 class="text-4xl font-bold text-white mb-8 text-center">Languages & Tools</h2>
+
+            <!-- Icons Grid -->
+            <div class="skill-icon-grid mb-12">
+                <!-- Row 1 -->
+                <div class="skill-icon">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg" alt="Python">
+                    <span>Python</span>
+                </div>
+                <div class="skill-icon">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/3/30/Java_programming_language_logo.svg"
+                        alt="Java">
+                    <span>Java</span>
+                </div>
+                <div class="skill-icon">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg"
+                        alt="GitHub">
+                    <span>GitHub</span>
+                </div>
+                <div class="skill-icon">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/d/dd/MySQL_logo.svg" alt="MySQL">
+                    <span>MySQL</span>
+                </div>
+                <div class="skill-icon">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/cf/Microsoft_Power_BI_logo.svg"
+                        alt="Power BI">
+                    <span>Power BI</span>
+                </div>
+                <!-- Row 2 -->
+                <div class="skill-icon">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/3/38/HTML5_logo_and_wordmark.svg"
+                        alt="HTML5">
+                    <span>HTML5</span>
+                </div>
+                <div class="skill-icon">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/d/d5/CSS3_logo_and_wordmark.svg"
+                        alt="CSS3">
+                    <span>CSS3</span>
+                </div>
+                <div class="skill-icon">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg"
+                        alt="AWS">
+                    <span>AWS (Basics)</span>
+                </div>
+                <div class="skill-icon">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Microsoft_Office_Excel_%282019%E2%80%93present%29.svg"
+                        alt="MS Excel">
+                    <span>MS Excel</span>
+                </div>
+                <div class="skill-icon">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Scikit_learn_logo_small.svg"
+                        alt="Scikit-learn">
+                    <span>Scikit-learn</span>
+                </div>
+            </div>
+
+            <hr class="border-gray-700 mb-8">
+
+            <!-- Explanations -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-xl font-semibold text-cyan-300 mb-3">Data Analysis & Visualization</h3>
+                    <p class="text-gray-300">Automating analytics and visual reports with Power BI. Analyzing data using
+                        Python libraries like NumPy, Pandas, and Matplotlib. Building interactive dashboards for data
+                        monitoring.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-cyan-300 mb-3">Machine Learning & AI</h3>
+                    <p class="text-gray-300">Developing ML-based systems like Intrusion Detection. Integrating multiple
+                        AI models for computer vision (YOLOv8), OCR (Tesseract), and distance calculation for web
+                        platforms.</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-cyan-300 mb-3">Software & System Development</h3>
+                    <p class="text-gray-300">Building secure, full-stack management systems with real-time alerts and
+                        complete CRUD operations (Create, Read, Update, Delete). Proficient in SQL and database
+                        management.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Projects Page -->
+        <div id="projects" class="page glass-container">
+            <h2 class="text-4xl font-bold text-white mb-8 text-center">Projects</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Project 1 -->
+                <div
+                    class="project-card bg-blue-900 bg-opacity-30 p-6 rounded-lg border border-transparent hover:border-blue-500">
+                    <h3 class="text-xl font-semibold text-white">Intrusion Detection System (Capstone)</h3>
+                    <p class="text-sm text-cyan-300 mt-1"> Python, Pandas, XG Boost, Scikit-learn</p>
+                    <p class="text-gray-300 mt-4">Developed an ML-based IDS to monitor network traffic and detect
+                        malicious activity in real-time. Implemented alerting, logging, and visualized attack patterns
+                        in Power BI.</p>
+                    <a href="https://github.com/niranjan-y/Intrusion-Detection-System.git" target="_blank"
+                        class="inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">View
+                        on GitHub</a>
+                </div>
+                <!-- Project 2 -->
+                <div
+                    class="project-card bg-blue-900 bg-opacity-30 p-6 rounded-lg border border-transparent hover:border-blue-500">
+                    <h3 class="text-xl font-semibold text-white">AI-Powered Assistive Web Platform</h3>
+                    <p class="text-sm text-cyan-300 mt-1">YOLOv8, PyTorch, OpenCV, Tesseract OCR</p>
+                    <p class="text-gray-300 mt-4">Developed a web app integrating AI models for object detection, text
+                        recognition, text reading, and distance calculation to support assistive device development.</p>
+                    <a href="https://github.com/niranjan-y/An-Enhanced-Artificial-Intelligence-Technique-for-Visually-Challenged.git"
+                        target="_blank"
+                        class="inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">View
+                        on GitHub</a>
+                </div>
+                <!-- Project 3 -->
+                <div
+                    class="project-card bg-blue-900 bg-opacity-30 p-6 rounded-lg border border-transparent hover:border-blue-500">
+                    <h3 class="text-xl font-semibold text-white"> Sales Insight Dashboard</h3>
+                    <p class="text-sm text-cyan-300 mt-1">Streamlit, Pandas, Scikit-learn,Plotly</p>
+                    <p class="text-gray-300 mt-4"> Developed a full-stack retail analytics dashboard using Streamlit and
+                        Pandas to manage sales, inventory, and customer
+                        data with secure, role-based user access.</p>
+                    <a href="https://github.com/niranjan-y/SalesInsightDashboard.git" target="_blank"
+                        class="inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">View
+                        on GitHub</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Certifications Page -->
+        <div id="certs" class="page glass-container">
+            <h2 class="text-4xl font-bold text-white mb-8 text-center">Certifications</h2>
+            <div class="overflow-x-auto">
+                <table class="cert-table">
+                    <thead>
+                        <tr>
+                            <th>Issuer</th>
+                            <th>Certificate</th>
+                            <th>Date</th>
+                            <th>Link</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><img src="https://upload.wikimedia.org/wikipedia/commons/5/50/Oracle_logo.svg"
+                                    alt="Oracle"></td>
+                            <td>Oracle Data Science Professional</td>
+                            <td>2025</td>
+                            <td><a href="https://catalog-education.oracle.com/pls/certview/sharebadge?id=D6B966DD4A1E02170D3BBE0BD5BA0A90CC23E4570872776F90B84663D3688658"
+                                    class="cert-link">View Credential</a></td>
+                        </tr>
+                        <tr>
+                            <td><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Microsoft_logo_%282012%29.svg/1920px-Microsoft_logo_%282012%29.svg.png"
+                                    alt="Microsoft"></td>
+                            <td>Career Essentials in Generative AI</td>
+                            <td>2025</td>
+                            <td><a href="https://www.linkedin.com/learning/certificates/02347c6bfa3e00fa1b8a2c3b90cb4a25b168bf71156bf3ec2ba290fdc61e3b24"
+                                    class="cert-link">View Credential</a></td>
+                        </tr>
+                        <tr>
+                            <td><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/IBM_logo.svg/500px-IBM_logo.svg.png"
+                                    alt="IBM" style="width: 50px;"></td>
+                            <td>IBM Devops and Agile Methodologies</td>
+                            <td>2025</td>
+                            <td><a href="https://niranjanyportfolio.my.canva.site/niranjanibmcertifications"
+                                    class="cert-link">View Credential</a></td>
+                        </tr>
+                        <tr>
+                            <td><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/University_of_Michigan_logo.svg/321px-University_of_Michigan_logo.svg.png"
+                                    alt="U of Michigan"></td>
+                            <td>Applied Machine Learning in Python</td>
+                            <td>2025</td>
+                            <td><a href="https://www.coursera.org/account/accomplishments/verify/45DJ9DBMFADA"
+                                    class="cert-link">View Credential</a></td>
+                        </tr>
+                        <tr>
+                            <td><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/HackerRank_Icon-1000px.png/500px-HackerRank_Icon-1000px.png"
+                                    alt="HackerRank" style="width: 50px;"></td>
+                            <td>HackerRank SQL Basic</td>
+                            <td>2025</td>
+                            <td><a href="#" class="cert-link">View Credential</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Links Page -->
+        <div id="links" class="page glass-container">
+            <h2 class="text-4xl font-bold text-white mb-8 text-center">Get In Touch</h2>
+            <p class="text-center text-lg text-gray-300 mb-10">Find me on these platforms or send me an email.</p>
+
+            <div class="flex flex-wrap justify-center gap-8">
+                <!-- LinkedIn -->
+                <a href="https://linkedin.com/in/niranjan-y-54b90b256" target="_blank"
+                    class="flex flex-col items-center gap-3 p-6 glass-container w-40 hover:bg-opacity-40 transition-all border border-transparent hover:border-cyan-500">
+                    <svg class="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill-rule="evenodd"
+                            d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span class="text-xl font-medium text-white">LinkedIn</span>
+                </a>
+
+                <!-- GitHub -->
+                <a href="https://github.com/niranjan-y" target="_blank"
+                    class="flex flex-col items-center gap-3 p-6 glass-container w-40 hover:bg-opacity-40 transition-all border border-transparent hover:border-cyan-500">
+                    <svg class="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill-rule="evenodd"
+                            d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.109-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.91 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span class="text-xl font-medium text-white">GitHub</span>
+                </a>
+
+                <!-- Resume -->
+                <a href="https://drive.google.com/file/d/1RC9GtBO8GH8pemTEUhhAEZsKfT-dBJ2x/view?usp=sharing"
+                    target="_blank" rel="noopener noreferrer"
+                    class="flex flex-col items-center gap-3 p-6 glass-container w-40 hover:bg-opacity-40 transition-all border border-transparent hover:border-cyan-500">
+                    <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                    <span class="text-xl font-medium text-white">Resume</span>
+                </a>
+
+            </div>
+
+            <div class="text-center mt-12 text-gray-400">
+                <div class="text-center mb-8">
+                    <a href="mailto:niranjanyalamanda@gmail.com"
+                        class="text-center mt-12 text-gray-400">niranjanyalamanda@gmail.com</a>
+                    <span class="text-brand-text-secondary">|</span>
+                    <a href="tel:+919182668636" class="text-center mt-12 text-gray-400">+91 9182668636</a>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Load Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Main Application Logic -->
+    <script>
+        // --- Global Variables ---
+        let particleScene, particleCamera, particleRenderer, particleStars;
+        let crystalScene, crystalCamera, crystalRenderer, crystal, crystalMouse = { x: 0, y: 0 };
+        let isCrystalDragging = false;
+        let crystalTargetRotation = { x: 0, y: 0 };
+        let crystalCurrentRotation = { x: 0, y: 0 };
+        const crystalDragEase = 0.1;
+
+        // --- Page Navigation ---
+        function showPage(pageId, element) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.style.display = 'none';
+            });
+            // Show the target page
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) {
+                targetPage.style.display = 'block';
+            }
+            // Update active nav link
+            document.querySelectorAll('nav .nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            if (element) {
+                element.classList.add('active');
+            }
+        }
+
+        function initNavigation() {
+            document.querySelectorAll('nav .nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const pageId = link.getAttribute('data-page');
+                    showPage(pageId, link);
+                });
+            });
+        }
+
+        // --- 3D Particle Background ---
+        function initParticleBackground() {
+            const canvas = document.getElementById('particle-bg');
+            particleScene = new THREE.Scene();
+            particleCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+            particleCamera.position.z = 1;
+
+            particleRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true });
+            particleRenderer.setSize(window.innerWidth, window.innerHeight);
+            particleRenderer.setClearColor(0x000000, 0); // Transparent background
+
+            const starCount = 5000;
+            const positions = new Float32Array(starCount * 3);
+            const colors = new Float32Array(starCount * 3);
+            const color = new THREE.Color();
+
+            for (let i = 0; i < starCount; i++) {
+                const i3 = i * 3;
+                positions[i3] = (Math.random() - 0.5) * 10;
+                positions[i3 + 1] = (Math.random() - 0.5) * 10;
+                positions[i3 + 2] = (Math.random() - 0.5) * 10;
+
+                // Mix of cosmic blues and cyans
+                color.set(Math.random() > 0.5 ? 0x3B82F6 : 0x22D3EE);
+                colors[i3] = color.r;
+                colors[i3 + 1] = color.g;
+                colors[i3 + 2] = color.b;
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.015,
+                vertexColors: true,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                depthWrite: false
+            });
+
+            particleStars = new THREE.Points(geometry, material);
+            particleScene.add(particleStars);
+
+            document.addEventListener('mousemove', onDocumentMouseMove);
+            window.addEventListener('resize', onWindowResize);
+            animateParticles();
+        }
+
+        function animateParticles() {
+            requestAnimationFrame(animateParticles);
+
+            const time = Date.now() * 0.0001;
+            particleStars.rotation.x = time * 0.25;
+            particleStars.rotation.y = time * 0.5;
+
+            particleRenderer.render(particleScene, particleCamera);
+        }
+
+        function onWindowResize() {
+            // Update particle background camera
+            particleCamera.aspect = window.innerWidth / window.innerHeight;
+            particleCamera.updateProjectionMatrix();
+            particleRenderer.setSize(window.innerWidth, window.innerHeight);
+
+            // Update crystal hero camera
+            if (crystalCamera && crystalRenderer) {
+                const container = document.getElementById('hero-crystal-container');
+                crystalCamera.aspect = container.clientWidth / container.clientHeight;
+                crystalCamera.updateProjectionMatrix();
+                crystalRenderer.setSize(container.clientWidth, container.clientHeight);
+            }
+        }
+
+        function onDocumentMouseMove(event) {
+            // Normalize mouse position
+            const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Move particle camera slightly
+            particleCamera.position.x += (mouseX * 0.5 - particleCamera.position.x) * 0.02;
+            particleCamera.position.y += (mouseY * 0.5 - particleCamera.position.y) * 0.02;
+            particleCamera.lookAt(particleScene.position);
+        }
+
+        // --- 3D Hero Crystal ---
+        function initHeroCrystal() {
+            const container = document.getElementById('hero-crystal-container');
+            if (!container) return; // Don't run if container not on page
+
+            crystalScene = new THREE.Scene();
+            crystalCamera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            crystalCamera.position.z = 2.5;
+
+            crystalRenderer = new THREE.WebGLRenderer({ alpha: true });
+            crystalRenderer.setSize(container.clientWidth, container.clientHeight);
+            crystalRenderer.setClearColor(0x000000, 0);
+            container.appendChild(crystalRenderer.domElement);
+
+            const geometry = new THREE.IcosahedronGeometry(1, 0);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x1E40AF, // Dark Blue
+                emissive: 0x06B6D4, // Cyan glow
+                shininess: 100,
+                specular: 0xffffff,
+                transparent: true,
+                opacity: 0.8,
+                wireframe: true,
+                wireframeLinewidth: 2
+            });
+
+            crystal = new THREE.Mesh(geometry, material);
+            crystalScene.add(crystal);
+
+            const light1 = new THREE.DirectionalLight(0xffffff, 1);
+            light1.position.set(1, 1, 1);
+            crystalScene.add(light1);
+
+            const light2 = new THREE.DirectionalLight(0x06B6D4, 0.5);
+            light2.position.set(-1, -1, -1);
+            crystalScene.add(light2);
+
+            const ambient = new THREE.AmbientLight(0x1E40AF, 0.3);
+            crystalScene.add(ambient);
+
+            // Mouse drag controls
+            let lastMouse = { x: 0, y: 0 };
+            const onMouseDown = (e) => {
+                isCrystalDragging = true;
+                container.style.cursor = 'grabbing';
+                lastMouse.x = e.clientX;
+                lastMouse.y = e.clientY;
+            };
+
+            const onMouseUp = () => {
+                isCrystalDragging = false;
+                container.style.cursor = 'grab';
+            };
+
+            const onMouseMove = (e) => {
+                if (!isCrystalDragging) return;
+                const deltaX = e.clientX - lastMouse.x;
+                const deltaY = e.clientY - lastMouse.y;
+
+                crystalTargetRotation.y += deltaX * 0.01;
+                crystalTargetRotation.x += deltaY * 0.01;
+
+                lastMouse.x = e.clientX;
+                lastMouse.y = e.clientY;
+            };
+
+            container.addEventListener('mousedown', onMouseDown);
+            container.addEventListener('mouseup', onMouseUp);
+            container.addEventListener('mouseleave', onMouseUp); // Stop dragging if mouse leaves
+            container.addEventListener('mousemove', onMouseMove);
+
+            animateCrystal();
+        }
+
+        function animateCrystal() {
+            if (!crystal) return; // Don't animate if not initialized
+
+            requestAnimationFrame(animateCrystal);
+
+            if (!isCrystalDragging) {
+                // Auto-rotate slowly
+                crystalTargetRotation.y += 0.002;
+            }
+
+            // Ease/lerp rotation for smooth drag effect
+            crystalCurrentRotation.x += (crystalTargetRotation.x - crystalCurrentRotation.x) * crystalDragEase;
+            crystalCurrentRotation.y += (crystalTargetRotation.y - crystalCurrentRotation.y) * crystalDragEase;
+
+            crystal.rotation.x = crystalCurrentRotation.x;
+            crystal.rotation.y = crystalCurrentRotation.y;
+
+            crystalRenderer.render(crystalScene, crystalCamera);
+        }
+
+        // --- Main Execution ---
+        // We run this code directly. By the time this script tag is parsed,
+        // the DOM is ready and three.js is loaded.
+        try {
+            initParticleBackground();
+            initHeroCrystal();
+            initNavigation();
+            // Show the 'home' page by default
+            showPage('home', document.querySelector('nav a[data-page="home"]'));
+        } catch (e) {
+            console.error("Portfolio initialization failed:", e);
+            // --- FAILSAFE ---
+            // If any JS fails, hide the canvas and just show the home page.
+            const bgCanvas = document.getElementById('particle-bg');
+            if (bgCanvas) bgCanvas.style.display = 'none';
+            document.body.style.background = '#02040a'; // Set fallback bg
+
+            // Manually show the home page content
+            const home = document.getElementById('home');
+            if (home) home.style.display = 'block';
+
+            // Try to make nav work even if 3D failed
+            try {
+                initNavigation();
+            } catch (navError) {
+                console.error("Basic navigation setup failed:", navError);
+            }
+        }
+
+    </script>
+</body>
+
+</html>
